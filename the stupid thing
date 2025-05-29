@@ -1,67 +1,100 @@
--- every time u execute it automatically makes an archive, so if ur tryna manually archive just execute it. do not execute it with settings on if ur doing manual saves or else it might bug out
 local cached
-local f
-local nilInstances = false -- doesnt lag unless a lot of children are removed
-local saveDeletedDescendants = false -- VERY LAGGY
-local saveNewChildren = false -- doesnt lag unless a lot of children are added
-local saveNewDescendants = false -- VERY LAGGY
-local waitTime = 0.25 -- time for saving stuff (excludes the automatic save), higher = lower chance of it being unloaded, 0.25 by default
-function save(p)
-	if not cached:FindFirstChild("Archive "..game.Workspace.DistributedGameTime) then
-		local archive = Instance.new("Folder")
-		archive.Name = "Archive "..game.Workspace.DistributedGameTime
-		archive.Parent = cached
-		p:Clone().Parent = archive
+local nilInstances = true -- saves deleted children
+local saveDeletedDescendants = false -- self explanatory (LAGGY)
+local saveNewChildren = true -- self explanatory
+local saveNewDescendants = false -- self explanatory (LAGGY)
+local saveOnTrigger = true -- saves when any of the above are triggered and enabled
+local waitTime = 0.25
+function valid(p)
+	return p and p:IsA("Instance") and not p:IsA("Terrain") and not p:IsA("Camera")
+end
+function cache()
+	cached = game.ReplicatedFirst:FindFirstChild("Cached_"..game.PlaceId)
+	if not cached then
+		cached = Instance.new("Folder")
+		cached.Name = "Cached_"..game.PlaceId
+		cached.Parent = game.ReplicatedFirst
 	end
 end
-if not game.ReplicatedFirst:FindFirstChild("Cached_"..game.PlaceId) then
-	cached = Instance.new("Folder")
-	cached.Name = "Cached_"..game.PlaceId
-	cached.Parent = game.ReplicatedFirst
-else
-	cached = game.ReplicatedFirst["Cached_"..game.PlaceId]
+local function f()
+	local archive = Instance.new("Folder")
+	archive.Name = "Archive_"..game.Workspace.DistributedGameTime
+	archive.Parent = cached
+	return archive
 end
-for i, v in pairs(game.Workspace:GetDescendants()) do
-	if not v:IsA("Terrain") and not v:IsA("Camera") then
-		save(v)
+local function decompile()
+	local existing = cached:FindFirstChild("Archive_"..game.Workspace.DistributedGameTime)
+	if existing then return end
+	local archive = f()
+	for i, v in ipairs(game.Workspace:GetChildren()) do
+		if valid(v) then
+			local clone
+			if not v.Archivable then
+				v.Archivable = true
+				clone = v:Clone()
+				v.Archivable = false
+				clone.Archivable = false
+			else
+				clone = v:Clone()
+			end
+			clone.Parent = archive
+		end
 	end
 end
-if nilInstances == true then
+local function save(p)
+	if not valid(p) then return end
+	local archive = f()
+	local clone = p:Clone()
+	clone.Parent = archive
+end
+local function track(p)
+	if not valid(p) then return end
+	local f = game.ReplicatedFirst:FindFirstChild("Instances in nil")
+	if not f then
+		f = Instance.new("Folder")
+		f.Name = "Instances in nil"
+		f.Parent = game.ReplicatedFirst
+	end
+	local clone = p:Clone()
+	clone.Parent = f
+	for i, v in pairs(p:GetChildren()) do
+		v:Clone().Parent = clone
+	end
+end
+cache()
+decompile()
+if nilInstances then
 	game.Workspace.ChildRemoved:Connect(function(p)
-		if not game.ReplicatedFirst:FindFirstChild("Instances in nil") then
-			f = Instance.new("Folder")
-			f.Parent = game.ReplicatedFirst
-			f.Name = "Instances in nil"
-		else
-			f = game.ReplicatedFirst["Instances in nil"]
+		if saveOnTrigger then
+			decompile()
 		end
-		if not p:IsA("Terrain") and not p:IsA("Camera") then
-			task.wait(waitTime)
-			p:Clone().Parent = f
-		end
+		track(p)
 	end)
 end
-if saveNewDescendants == true then
-	game.Workspace.DescendantAdded:Connect(function(p)
-		if not p:IsA("Terrain") and not p:IsA("Camera") then
-			task.wait(waitTime)
-			save(p)
-		end
-	end)
-end
-if saveNewDescendants == true then
-	game.Workspace.DescendantRemoving:Connect(function(p)
-		if not p:IsA("Terrain") and not p:IsA("Camera") then
-			task.wait(waitTime)
-			save(p)
-		end
-	end)
-end
-if saveNewChildren == true then
+if saveNewChildren then
 	game.Workspace.ChildAdded:Connect(function(p)
-		if not p:IsA("Terrain") and not p:IsA("Camera") then
-			task.wait(waitTime)
-			save(p)
+		if saveOnTrigger then
+			decompile()
 		end
+		task.wait(waitTime)
+		save(p)
+	end)
+end
+if saveNewDescendants then
+	game.Workspace.DescendantAdded:Connect(function(p)
+		if saveOnTrigger then
+			decompile()
+		end
+		task.wait(waitTime)
+		save(p)
+	end)
+end
+if saveDeletedDescendants then
+	game.Workspace.DescendantRemoving:Connect(function(p)
+		if saveOnTrigger then
+			decompile()
+		end
+		task.wait(waitTime)
+		save(p)
 	end)
 end
