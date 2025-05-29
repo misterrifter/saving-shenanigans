@@ -1,3 +1,4 @@
+-- every time u execute it automatically makes an archive, so if ur tryna manually archive just execute it. do not execute it with settings on if ur doing manual saves or else it might bug out
 local cached
 local f
 local nilInstances = false -- doesnt lag unless a lot of children are removed
