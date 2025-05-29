@@ -1,0 +1,66 @@
+local cached
+local f
+local nilInstances = false -- doesnt lag unless a lot of children are removed
+local saveDeletedDescendants = false -- VERY LAGGY
+local saveNewChildren = false -- doesnt lag unless a lot of children are added
+local saveNewDescendants = false -- VERY LAGGY
+local waitTime = 0.25 -- time for saving stuff (excludes the automatic save), higher = lower chance of it being unloaded, 0.25 by default
+function save(p)
+	if not cached:FindFirstChild("Archive "..game.Workspace.DistributedGameTime) then
+		local archive = Instance.new("Folder")
+		archive.Name = "Archive "..game.Workspace.DistributedGameTime
+		archive.Parent = cached
+		p:Clone().Parent = archive
+	end
+end
+if not game.ReplicatedFirst:FindFirstChild("Cached_"..game.PlaceId) then
+	cached = Instance.new("Folder")
+	cached.Name = "Cached_"..game.PlaceId
+	cached.Parent = game.ReplicatedFirst
+else
+	cached = game.ReplicatedFirst["Cached_"..game.PlaceId]
+end
+for i, v in pairs(game.Workspace:GetDescendants()) do
+	if not v:IsA("Terrain") and not v:IsA("Camera") then
+		save(v)
+	end
+end
+if nilInstances == true then
+	game.Workspace.ChildRemoved:Connect(function(p)
+		if not game.ReplicatedFirst:FindFirstChild("Instances in nil") then
+			f = Instance.new("Folder")
+			f.Parent = game.ReplicatedFirst
+			f.Name = "Instances in nil"
+		else
+			f = game.ReplicatedFirst["Instances in nil"]
+		end
+		if not p:IsA("Terrain") and not p:IsA("Camera") then
+			task.wait(waitTime)
+			p:Clone().Parent = f
+		end
+	end)
+end
+if saveNewDescendants == true then
+	game.Workspace.DescendantAdded:Connect(function(p)
+		if not p:IsA("Terrain") and not p:IsA("Camera") then
+			task.wait(waitTime)
+			save(p)
+		end
+	end)
+end
+if saveNewDescendants == true then
+	game.Workspace.DescendantRemoving:Connect(function(p)
+		if not p:IsA("Terrain") and not p:IsA("Camera") then
+			task.wait(waitTime)
+			save(p)
+		end
+	end)
+end
+if saveNewChildren == true then
+	game.Workspace.ChildAdded:Connect(function(p)
+		if not p:IsA("Terrain") and not p:IsA("Camera") then
+			task.wait(waitTime)
+			save(p)
+		end
+	end)
+end
