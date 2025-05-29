@@ -57,6 +57,7 @@ local function track(p)
 	end
 	local clone = p:Clone()
 	clone.Parent = f
+    clone:ClearAllChildren()
 	for i, v in pairs(p:GetChildren()) do
 		v:Clone().Parent = clone
 	end
